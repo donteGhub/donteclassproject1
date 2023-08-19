@@ -1,0 +1,143 @@
+Description: CD12352 - Infrastructure as Code Project - Udagram
+
+Parameters:
+
+  ProjectName: 
+    Type: String
+    Description: ProjectName used for tagging resources
+   
+  VpcCIDR: 
+    Description: IP range for the VPC in CIDR notation
+    Type: String
+
+  
+  PublicSubnet1CIDR:
+    Description: IP range in CIDR notation for the public subnet in the first Availability Zone
+    Type: String
+   
+  PublicSubnet2CIDR:
+    Description: IP range in CIDR notation for the public subnet in the first Availability Zone
+    Type: String
+   
+        
+  PrivateSubnet1CIDR:
+    Description: IP range in CIDR notation for the public subnet in the first Availability Zone
+    Type: String
+    
+    
+  PrivateSubnet2CIDR:
+    Description: IP range in CIDR notation for the public subnet in the first Availability Zone
+    Type: String  
+
+Resources:
+  
+  VPC: 
+    Type: AWS::EC2::VPC
+    Properties:
+      CidrBlock: !Ref VpcCIDR
+      EnableDnsHostnames: true
+      Tags: 
+      - Key: Name 
+        Value: !Ref ProjectName           
+  
+  InternetGateway:
+    Type: AWS::EC2::InternetGateway
+    Properties:
+      Tags:
+      - Key: Name
+        Value: !Ref ProjectName
+
+  InternetGatewayAttachment:
+    Type: AWS::EC2::VPCGatewayAttachment
+    Properties:
+      InternetGatewayId: !Ref InternetGateway
+      VpcId: !Ref VPC
+
+  PublicSubnet1: 
+    Type: AWS::EC2::Subnet
+    Properties:
+      VpcId: !Ref VPC
+      AvailabilityZone: !Select [ 0, !GetAZs '' ]
+      CidrBlock: !Ref PublicSubnet1CIDR
+      MapPublicIpOnLaunch: false
+      Tags: 
+      - Key: Name 
+        Value: !Sub ${ProjectName} Public Subnet1 (AZ1)
+
+  PublicSubnet2: 
+    Type: AWS::EC2::Subnet
+    Properties:
+      VpcId: !Ref VPC
+      AvailabilityZone: !Select [ 1, !GetAZs '' ]
+      CidrBlock: !Ref PublicSubnet2CIDR
+      MapPublicIpOnLaunch: false
+      Tags: 
+      - Key: Name 
+        Value: !Sub ${ProjectName} Public Subnet2 (AZ1)
+
+  PrivateSubnet1: 
+    Type: AWS::EC2::Subnet
+    Properties:
+      VpcId: !Ref VPC
+      AvailabilityZone: !Select [ 0, !GetAZs '' ]
+      CidrBlock: !Ref PrivateSubnet1CIDR
+      MapPublicIpOnLaunch: false
+      Tags: 
+      - Key: Name 
+        Value: !Sub ${ProjectName} Private Subnet1 (AZ1)
+
+  PrivateSubnet2: 
+    Type: AWS::EC2::Subnet
+    Properties:
+      VpcId: !Ref VPC
+      AvailabilityZone: !Select [ 1, !GetAZs '' ]
+      CidrBlock: !Ref PrivateSubnet2CIDR
+      MapPublicIpOnLaunch: false
+      Tags: 
+      - Key: Name 
+        Value: !Sub ${ProjectName} Private Subnet2 (AZ1)
+
+  NatGateway1EIP:
+    Type: AWS::EC2::EIP
+    DependsOn: InternetGatewayAttachment
+    Properties: 
+      Domain: vpc
+       
+  NatGateway2EIP:
+    Type: AWS::EC2::EIP
+    DependsOn: InternetGatewayAttachment
+    Properties:
+        Domain: vpc
+        
+  NatGateway1: 
+    Type: AWS::EC2::NatGateway
+    Properties: 
+      AllocationId: !GetAtt NatGateway1EIP.AllocationId
+      SubnetId: !Ref PublicSubnet1
+        
+  NatGateway2: 
+    Type: AWS::EC2::NatGateway
+    Properties:
+      AllocationId: !GetAtt NatGateway2EIP.AllocationId
+      SubnetId: !Ref PublicSubnet2       
+
+Outputs:
+  VpcId:
+    Description: A reference to the created VPC
+    Value: !Ref VPC
+    Export:
+      Name: !Sub ${ProjectName}-VPCID 
+      
+  PublicSubnets:
+    Description: A list of the public subnets
+    Value: !Join [ ",", [ !Ref PublicSubnet1, !Ref PublicSubnet2 ]]
+    Export:
+      Name: !Sub ${ProjectName}-PUB-NETS  
+
+  PrivateSubnets:
+    Description: A list of the private subnets
+    Value: !Join [ ",", [ !Ref PrivateSubnet1, !Ref PrivateSubnet2 ]]
+    Export:
+      Name: !Sub ${ProjectName}-PRV-NETS           
+      
+  
